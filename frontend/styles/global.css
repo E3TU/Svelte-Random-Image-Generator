@@ -1,0 +1,10 @@
+@import '@fontsource-variable/lexend';
+
+:root {
+	--bg-color: #191919;
+}
+
+body {
+	font-family: 'Lexend Variable', sans-serif;
+	background-color: var(--bg-color);
+}
