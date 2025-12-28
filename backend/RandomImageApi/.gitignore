@@ -1,0 +1,20 @@
+# .NET build artifacts
+bin/
+obj/
+
+# User-specific files
+.vs/
+
+# .NET package cache
+.nuget/
+
+# Local environment files (e.g., appsettings.Development.json)
+appsettings.json
+appsettings.Development.json
+*.user
+
+# Logs
+*.log
+
+# Rider or Visual Studio settings
+.vscode/
