@@ -1,41 +1,71 @@
+using DotNetEnv;
+using System.Net.Http;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+Env.Load();
+
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+string unsplashApiKey = Environment.GetEnvironmentVariable("API_KEY");
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/randomphoto", async (HttpClient httpClient) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+
+    if (string.IsNullOrEmpty(unsplashApiKey))
+    {
+        return Results.Problem("Api key is missing.");
+    }
+
+    string url = $"https://api.unsplash.com/photos/random?client_id={unsplashApiKey}";
+
+    try
+    {
+        HttpResponseMessage response = await httpClient.GetAsync(url);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var responseData = await response.Content.ReadAsStringAsync();
+
+            var photo = JsonSerializer.Deserialize<UnsplashPhoto>(responseData);
+
+            if (photo != null && photo.Urls != null) 
+            {
+                return Results.Ok(new { photoUrl = photo.Urls.Regular });
+            }
+            return Results.NotFound("No photo found");
+        }
+        else
+        {
+            return Results.Problem("Error fetching data from unsplash", statusCode: (int)response.StatusCode);
+        }
+    }
+    catch (HttpRequestException ex)
+    {
+        return Results.Problem($"Request error: {ex.Message}", statusCode: 500);
+    }
+});
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+public class UnsplashPhoto
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    [JsonPropertyName("urls")]
+    public PhotoUrls Urls { get; set; }
+
+    public class PhotoUrls
+    {
+        [JsonPropertyName("regular")]
+        public string Regular { get; set; }
+    }
 }
