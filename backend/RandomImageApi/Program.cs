@@ -5,14 +5,28 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.ComponentModel;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 Env.Load();
 
 builder.Services.AddHttpClient();
 
+builder.Services.AddCors(options => {
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+    policy => 
+    {
+        policy.WithOrigins("http://localhost:5173");
+    });
+});
+
+
 var app = builder.Build();
+
+app.UseCors(MyAllowSpecificOrigins);
 
 string unsplashApiKey = Environment.GetEnvironmentVariable("API_KEY");
 
